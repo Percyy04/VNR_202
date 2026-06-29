@@ -1,0 +1,418 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== CSS Custom Properties – Vintage Newspaper ===== */
+:root {
+  --paper-bg: #f4e7d0;
+  --paper-dark: #e6d5b8;
+  --paper-light: #faf3e6;
+  --ink: #1a1a1a;
+  --headline-red: #9e1b1b;
+  --gold: #b8860b;
+  --border: #bca98c;
+  --muted: #6b6b6b;
+}
+
+/* ===== Global Reset & Base ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-family: 'Source Serif 4', Georgia, serif;
+  background-color: var(--paper-bg);
+  color: var(--ink);
+}
+
+body {
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Scroll Snap Container ===== */
+.scroll-container {
+  height: 100vh;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-container.presentation-mode {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-container.presentation-mode::-webkit-scrollbar {
+  display: none;
+}
+
+.snap-section {
+  min-height: 100vh;
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== Paper Grain Texture (CSS only) ===== */
+.paper-grain {
+  position: relative;
+}
+
+.paper-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)' opacity='0.06'/%3E%3C/svg%3E");
+  background-size: 512px 512px;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 1;
+  mix-blend-mode: multiply;
+}
+
+.paper-grain > *:not(.absolute):not(.fixed) {
+  position: relative;
+  z-index: 2;
+}
+
+.paper-grain > .absolute,
+.paper-grain > .fixed {
+  z-index: 2;
+}
+
+/* ===== Paper Stain / Aged Spots ===== */
+.paper-aged::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 85%, rgba(188, 169, 140, 0.2) 0%, transparent 40%),
+    radial-gradient(ellipse at 85% 15%, rgba(188, 169, 140, 0.15) 0%, transparent 35%),
+    radial-gradient(ellipse at 50% 50%, rgba(188, 169, 140, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===== Newspaper Divider ===== */
+.newspaper-divider {
+  border: none;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border) 15%,
+    var(--border) 85%,
+    transparent
+  );
+  margin: 1.5rem 0;
+}
+
+.newspaper-divider-thick {
+  border: none;
+  height: 4px;
+  background: var(--ink);
+  margin: 1rem 0;
+}
+
+.newspaper-divider-double {
+  border: none;
+  height: 0;
+  border-top: 3px double var(--ink);
+  margin: 1rem 0;
+}
+
+/* ===== Historical Image Filter ===== */
+.newspaper-img {
+  filter: grayscale(100%) sepia(20%) contrast(110%);
+  transition: filter 0.4s ease;
+}
+
+.newspaper-img:hover {
+  filter: grayscale(60%) sepia(15%) contrast(105%);
+}
+
+/* ===== Timeline Dọc Trái (Archive Annotation Line) ===== */
+.timeline-line {
+  position: fixed;
+  left: 32px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--headline-red) 10%,
+    var(--headline-red) 90%,
+    transparent 100%
+  );
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.timeline-node {
+  position: absolute;
+  left: 25px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--paper-bg);
+  z-index: 41;
+  animation: pulse-brass 2.5s ease-in-out infinite;
+}
+
+.timeline-node.active {
+  background: var(--headline-red);
+  border-color: var(--headline-red);
+}
+
+@keyframes pulse-brass {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(184, 134, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(184, 134, 11, 0);
+  }
+}
+
+/* ===== SVG Map Animations ===== */
+.animated-dash {
+  stroke-dasharray: 8 6;
+  animation: dashMove 2s linear infinite;
+}
+
+@keyframes dashMove {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+/* ===== Horizontal Scroll Section ===== */
+.horizontal-scroll {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  gap: 0;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-track {
+  background: var(--paper-dark);
+}
+
+.horizontal-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.horizontal-panel {
+  min-width: 100%;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  padding: 2rem 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== Tab Component (Newspaper Style) ===== */
+.tab-button {
+  padding: 0.75rem 1.5rem;
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+  color: var(--ink);
+}
+
+.tab-button.active {
+  color: var(--headline-red);
+  border-bottom-color: var(--headline-red);
+}
+
+/* ===== Quote Block (Pull Quote Newspaper Style) ===== */
+.quote-block {
+  border-left: 4px solid var(--headline-red);
+  padding: 1.25rem 1.75rem;
+  margin: 2rem 0;
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--ink);
+  background: rgba(158, 27, 27, 0.04);
+}
+
+/* ===== Modal (Newspaper Clipping Style) ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: var(--paper-light);
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  max-width: 620px;
+  width: 90%;
+  padding: 2rem;
+  position: relative;
+  box-shadow: 4px 4px 0 rgba(26, 26, 26, 0.1);
+}
+
+/* ===== Newspaper Feature Block (replaces flip cards) ===== */
+.newspaper-block {
+  background: var(--paper-light);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.newspaper-block:hover {
+  box-shadow: 2px 2px 0 rgba(26, 26, 26, 0.1);
+}
+
+.newspaper-block img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+/* ===== Date Badge ===== */
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--headline-red);
+  border: 1px solid var(--headline-red);
+  background: rgba(158, 27, 27, 0.04);
+}
+
+/* ===== Newspaper Side Note ===== */
+.side-note {
+  border: 1px solid var(--border);
+  padding: 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  background: var(--paper-light);
+}
+
+/* ===== Editorial 2-Column Text ===== */
+.editorial-columns {
+  column-count: 2;
+  column-gap: 2rem;
+  column-rule: 1px solid var(--border);
+  text-align: justify;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 768px) {
+  .editorial-columns {
+    column-count: 1;
+  }
+}
+
+/* ===== Custom Scrollbar (Paper) ===== */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--paper-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animated-dash {
+    animation: none;
+  }
+
+  .newspaper-img {
+    transition: none;
+  }
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .timeline-line {
+    left: 16px;
+  }
+
+  .timeline-node {
+    left: 9px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .horizontal-panel {
+    padding: 1.5rem 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .timeline-line {
+    display: none;
+  }
+
+  .timeline-node {
+    display: none;
+  }
+
+  .horizontal-panel {
+    padding: 1rem;
+  }
+}
