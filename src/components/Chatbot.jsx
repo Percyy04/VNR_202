@@ -12,6 +12,8 @@ Trả lời ngắn gọn, súc tích bằng tiếng Việt mang phong cách báo
 Không bịa thêm thông tin ngoài phạm vi bài.
 Không trả lời gì khác ngoài nội dung Lịch sử đảng.`;
 
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+
 
 const SUGGESTED_QUESTIONS = [
   'Đại hội III có ý nghĩa gì?',
@@ -47,7 +49,11 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      const url = '/.netlify/functions/chat';
+      if (!API_KEY) {
+        throw new Error('Thiếu API Key (VITE_GEMINI_API_KEY)');
+      }
+      
+      const url = 'https://api.shopaikey.com/v1/chat/completions';
 
       const apiMessages = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -60,7 +66,8 @@ export default function Chatbot() {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
         },
         body: JSON.stringify({
           model: 'gemini-3.1-flash-lite-preview',
