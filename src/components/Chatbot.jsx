@@ -1,17 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
-const SYSTEM_PROMPT = `Bạn là trợ lý lịch sử chuyên về giai đoạn 1961-1965 của Việt Nam.
+const SYSTEM_PROMPT = `Bạn là trợ lý lịch sử Đảng chuyên về giai đoạn 1961-1965 của Việt Nam.
 Chỉ trả lời các câu hỏi liên quan đến nội dung bài báo "NHÂN DÂN - SỐ ĐẶC BIỆT":
 Đại hội III, Kế hoạch 5 năm miền Bắc, chi viện đường 559/759,
 Mặt trận GPMN, chiến lược Chiến tranh đặc biệt, các trận Ấp Bắc,
 Bình Giã, Ba Gia, Đồng Xoài.
 Trả lời ngắn gọn, súc tích bằng tiếng Việt mang phong cách báo chí cũ.
-Không bịa thêm thông tin ngoài phạm vi bài.`;
+Không bịa thêm thông tin ngoài phạm vi bài.
+Không trả lời gì khác ngoài nội dung Lịch sử đảng.`;
 
-const PROXY_URL = import.meta.env.VITE_CHAT_PROXY_URL || '';
-const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
 
 const SUGGESTED_QUESTIONS = [
   'Đại hội III có ý nghĩa gì?',
@@ -47,25 +47,25 @@ export default function Chatbot() {
     setIsLoading(true);
 
     try {
-      const apiMessages = newMessages.map(m => ({
-        role: m.role,
-        content: m.content,
-      }));
+      const url = '/.netlify/functions/chat';
 
-      const url = PROXY_URL || 'https://api.anthropic.com/v1/messages';
+      const apiMessages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...newMessages.map(m => ({
+          role: m.role,
+          content: m.content
+        }))
+      ];
 
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 500,
-          system: SYSTEM_PROMPT,
+          model: 'gemini-3.1-flash-lite-preview',
           messages: apiMessages,
+          stream: true
         }),
       });
 
@@ -73,10 +73,54 @@ export default function Chatbot() {
         throw new Error(`API error: ${response.status}`);
       }
 
-      const data = await response.json();
-      const assistantMsg = data.content?.[0]?.text || 'Xin lỗi, tôi không thể trả lời lúc này.';
+      // Khởi tạo tin nhắn trống cho assistant
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
-      setMessages(prev => [...prev, { role: 'assistant', content: assistantMsg }]);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // Giữ lại phần tử cuối cùng vì nó có thể chưa hoàn chỉnh (chưa có dấu xuống dòng)
+        buffer = lines.pop();
+
+        for (let line of lines) {
+          line = line.trim();
+          if (!line) continue;
+          
+          if (line.startsWith('data:')) {
+            const dataStr = line.substring(5).trim();
+            if (dataStr === '[DONE]') {
+              continue;
+            }
+            
+            try {
+              const parsed = JSON.parse(dataStr);
+              const token = parsed.choices?.[0]?.delta?.content || '';
+              
+              if (token) {
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  newMsgs[newMsgs.length - 1] = {
+                    ...newMsgs[newMsgs.length - 1],
+                    content: newMsgs[newMsgs.length - 1].content + token
+                  };
+                  return newMsgs;
+                });
+              }
+            } catch (e) {
+              console.warn('JSON parse error on chunk:', dataStr);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Chatbot error:', error);
       setMessages(prev => [
@@ -127,13 +171,14 @@ export default function Chatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-24 right-6 z-[70] w-80 flex flex-col paper-grain"
+            className="!fixed bottom-24 right-6 z-[70] w-[90vw] md:w-[420px] flex flex-col paper-grain"
             style={{
-              height: 420,
+              height: 520,
+              maxHeight: '75vh',
               background: 'var(--paper-light)',
               border: '2px solid var(--border)',
               borderRadius: '2px',
-              boxShadow: '4px 4px 0 rgba(26,26,26,0.1)',
+              boxShadow: '6px 6px 0 rgba(26,26,26,0.15)',
             }}
           >
             {/* Header */}
@@ -170,10 +215,11 @@ export default function Chatbot() {
                       <button
                         key={i}
                         onClick={() => sendMessage(q)}
-                        className="block w-full text-left px-3 py-2 text-xs font-serif transition-colors hover:bg-black/5"
+                        className="block w-full text-left px-4 py-2.5 text-sm font-serif transition-colors hover:bg-black/5"
                         style={{
                           color: 'var(--ink)',
-                          border: '1px solid var(--border)',
+                          border: '1px dashed var(--border)',
+                          borderBottom: '2px solid var(--border)',
                           background: 'transparent',
                           cursor: 'pointer'
                         }}
@@ -191,25 +237,37 @@ export default function Chatbot() {
                   className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center mt-1 border border-current" style={{ color: 'var(--ink)', background: 'var(--paper-bg)' }}>
-                      <Bot size={12} />
+                    <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center mt-1 border-2 border-current" style={{ color: 'var(--headline-red)', background: 'var(--paper-bg)' }}>
+                      <Bot size={16} />
                     </div>
                   )}
                   <div
-                    className="max-w-[75%] px-3 py-2 text-sm font-serif leading-relaxed"
+                    className="max-w-[80%] px-4 py-3 font-serif leading-relaxed chat-markdown"
                     style={{
                       background: msg.role === 'user'
                         ? 'var(--paper-dark)'
-                        : 'transparent',
+                        : 'rgba(255,255,255,0.4)',
                       color: 'var(--ink)',
-                      border: msg.role === 'assistant' ? 'none' : '1px solid var(--border)',
+                      fontSize: msg.role === 'assistant' ? '0.95rem' : '0.9rem',
+                      border: msg.role === 'assistant' ? '1px solid var(--border)' : '1px solid var(--ink)',
+                      borderLeft: msg.role === 'assistant' ? '4px solid var(--headline-red)' : '1px solid var(--ink)',
+                      boxShadow: msg.role === 'user' ? '2px 2px 0 var(--ink)' : 'none',
                     }}
                   >
-                    {msg.content}
+                    <ReactMarkdown
+                      components={{
+                        p: ({node, ...props}) => <p style={{ marginBottom: '0.5em' }} {...props} />,
+                        ul: ({node, ...props}) => <ul style={{ listStyleType: 'disc', paddingLeft: '1.5em', marginBottom: '0.5em' }} {...props} />,
+                        ol: ({node, ...props}) => <ol style={{ listStyleType: 'decimal', paddingLeft: '1.5em', marginBottom: '0.5em' }} {...props} />,
+                        strong: ({node, ...props}) => <strong style={{ fontWeight: 700, color: 'var(--headline-red)' }} {...props} />
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
                   </div>
                   {msg.role === 'user' && (
-                    <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center mt-1 border border-current" style={{ color: 'var(--ink)', background: 'var(--paper-bg)' }}>
-                      <User size={12} />
+                    <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center mt-1 border-2 border-current" style={{ color: 'var(--ink)', background: 'var(--paper-bg)' }}>
+                      <User size={16} />
                     </div>
                   )}
                 </div>
@@ -242,11 +300,12 @@ export default function Chatbot() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Nhập nội dung tra cứu..."
-                className="flex-1 px-3 py-2 text-sm font-serif outline-none"
+                className="flex-1 px-4 py-2.5 text-sm font-serif outline-none"
                 style={{
-                  background: 'transparent',
+                  background: 'var(--paper-light)',
                   color: 'var(--ink)',
                   border: '1px solid var(--border)',
+                  borderBottom: '2px solid var(--ink)',
                 }}
               />
               <button

@@ -12,10 +12,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "dotenv": "^17.4.2",
     "framer-motion": "^12.42.0",
     "lucide-react": "^1.22.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
+    "react-twemoji": "^0.7.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.3",
